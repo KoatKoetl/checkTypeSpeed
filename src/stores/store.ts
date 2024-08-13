@@ -56,6 +56,16 @@ const useStore = create<StoreState>((set) => ({
     set((state) => {
       if (state.isInputDisabled) return state;
 
+      const newState: Partial<StoreState> = {
+        inputText: text,
+      };
+
+      if (!state.isTestStarted) {
+        newState.isTestStarted = true;
+        newState.startTime = Date.now();
+        state.startTest(state.selectedDuration);
+      }
+
       const incorrectChars = calculateIncorrectChars(text, state.displayText);
 
       const isTestComplete = text.length === state.displayText.length;
@@ -69,6 +79,7 @@ const useStore = create<StoreState>((set) => ({
 
       return {
         ...state,
+        ...newState,
         incorrectChars,
       };
     }),
