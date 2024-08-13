@@ -123,10 +123,17 @@ const useStore = create<StoreState>((set) => ({
         newCursorPosition = state.cursorPosition + 1;
       }
 
+      if (newCursorPosition !== state.cursorPosition) {
+        return {
+          ...state,
+          inputText: newInputText,
+          cursorPosition: newCursorPosition,
+        };
+      }
+
       return {
         ...state,
         inputText: newInputText,
-        cursorPosition: newCursorPosition,
       };
     }),
 

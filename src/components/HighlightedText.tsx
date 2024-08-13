@@ -5,7 +5,6 @@ import { useStore } from "../stores/store";
 const HighlightedText = () => {
   const { inputText, displayText, cursorPosition } = useStore();
 
-  // Memoize hightlighted text to re-render on change only
   const highlightedText = useMemo(() => {
     return displayText.split("").map((char, index) => {
       let className = "text-primary-gray";
