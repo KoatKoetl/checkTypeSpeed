@@ -17,7 +17,7 @@ const HighlightedText = () => {
       if (index === cursorPosition) {
         className +=
           " " +
-          "underline decoration-2 underline-offset-4 sm:underline-offset-6 lg:animate-blink";
+          "underline decoration-2 underline-offset-4 sm:underline-offset-6 animate-blink";
       }
 
       return (
