@@ -56,8 +56,11 @@ const useStore = create<StoreState>((set) => ({
     set((state) => {
       if (state.isInputDisabled) return state;
 
+      const newCursorPosition = text.length;
+
       const newState: Partial<StoreState> = {
         inputText: text,
+        cursorPosition: newCursorPosition,
       };
 
       if (!state.isTestStarted) {

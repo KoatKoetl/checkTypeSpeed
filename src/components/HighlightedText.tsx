@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import TextInput from "../components/TextInput";
 import { useStore } from "../stores/store";
 
 const HighlightedText = () => {
   const { inputText, displayText, cursorPosition } = useStore();
-  const textInputRef = useRef<HTMLInputElement | null>(null);
 
   const highlightedText = useMemo(() => {
     return displayText.split("").map((char, index) => {
@@ -28,34 +27,6 @@ const HighlightedText = () => {
       );
     });
   }, [displayText, inputText, cursorPosition]);
-
-  // Effect to handle cursor positioning on input change
-  useEffect(() => {
-    const textInput = textInputRef.current;
-    if (textInput && cursorPosition !== null) {
-      textInput.setSelectionRange(cursorPosition, cursorPosition);
-    }
-  }, [cursorPosition]);
-
-  // Handle input event to correctly manage cursor on mobile devices
-  useEffect(() => {
-    const handleInput = () => {
-      if (textInputRef.current && cursorPosition !== null) {
-        setTimeout(() => {
-          textInputRef.current?.setSelectionRange(
-            cursorPosition,
-            cursorPosition,
-          );
-        }, 0); // Delay helps with mobile devices
-      }
-    };
-
-    window.addEventListener("input", handleInput);
-
-    return () => {
-      window.removeEventListener("input", handleInput);
-    };
-  }, [cursorPosition]);
 
   return (
     <div className="relative z-10 mx-auto max-h-44 max-w-96 py-2 text-lg font-bold sm:max-w-2xl">
