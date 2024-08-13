@@ -18,7 +18,7 @@ const LengthButton = ({ length, isActive, styles = "" }: LengthButton) => {
   return (
     <button
       type="button"
-      className={`rounded border-2 border-transparent px-4 py-1 transition-all duration-300 ${isActive ? "bg-primary-green" : "hover:border-primary-green"} sm:mx-4 ${styles}`}
+      className={`rounded border-2 border-transparent px-4 py-1 transition-all duration-300 ${isActive ? "bg-primary-green" : "active:border-primary-green sm:hover:border-primary-green"} sm:mx-4 ${styles}`}
       onClick={() => setWordsLength()}
     >
       {length}

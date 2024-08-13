@@ -7,7 +7,7 @@ const ResetButton = () => {
     <button
       type="button"
       onClick={resetTest}
-      className="border-primary-red hover:bg-primary-red rounded border px-2 py-1 transition-colors duration-200 sm:px-4 sm:py-2"
+      className="rounded border border-primary-red px-2 py-1 transition-colors duration-200 active:bg-primary-red sm:px-4 sm:py-2 sm:hover:bg-primary-red"
     >
       Restart
     </button>
