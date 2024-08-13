@@ -28,7 +28,6 @@ interface StoreState {
   setTimer: (time: number) => void;
   setSelectedDuration: (duration: number) => void;
   generateWords: (count: number) => void;
-  setIsTestStarted: (started: boolean) => void;
   setCursorPosition: (position: number) => void;
   handleKeyDown: (event: string) => void;
   calculateWPM: () => void;
@@ -37,7 +36,7 @@ interface StoreState {
   resetTest: () => void;
 }
 
-const useStore = create<StoreState>((set) => ({
+const useStore = create<StoreState>((set, get) => ({
   inputText: "",
   displayText: generateWords(DEFAULT_WORD_COUNT),
   startTime: null,
@@ -52,137 +51,127 @@ const useStore = create<StoreState>((set) => ({
   incorrectChars: 0,
   intervalID: null,
 
-  setInputText: (text) =>
-    set((state) => {
-      if (state.isInputDisabled) return state;
+  setInputText: (text) => {
+    const state = get();
+    if (state.isInputDisabled) return;
 
-      const newCursorPosition = text.length;
+    const isTestComplete = text.length === state.displayText.length;
+    if (!state.isTestStarted) {
+      set({
+        isTestStarted: true,
+        startTime: Date.now(),
+      });
+      state.startTest(state.selectedDuration);
+    }
 
-      const newState: Partial<StoreState> = {
-        inputText: text,
-        cursorPosition: newCursorPosition,
-      };
+    set({
+      inputText: text,
+      cursorPosition: text.length,
+      incorrectChars: calculateIncorrectChars(text, state.displayText),
+      ...(isTestComplete ? { isInputDisabled: true } : {}),
+    });
 
-      if (!state.isTestStarted) {
-        newState.isTestStarted = true;
-        newState.startTime = Date.now();
-        state.startTest(state.selectedDuration);
-      }
-
-      const incorrectChars = calculateIncorrectChars(text, state.displayText);
-
-      const isTestComplete = text.length === state.displayText.length;
-
-      if (isTestComplete) {
-        state.endTest();
-        return {
-          isInputDisabled: true,
-        };
-      }
-
-      return {
-        ...state,
-        ...newState,
-        incorrectChars,
-      };
-    }),
+    if (isTestComplete) {
+      state.endTest();
+    }
+  },
 
   setDisplayText: (text) => set({ displayText: text }),
 
   setCursorPosition: (position) => set({ cursorPosition: position }),
 
-  handleKeyDown: (key) =>
-    set((state) => {
-      if (state.isInputDisabled) return state;
+  handleKeyDown: (key) => {
+    const state = get();
+    if (state.isInputDisabled) return;
 
-      if (!state.isTestStarted) {
-        state.isTestStarted = true;
-        state.startTime = Date.now();
-        state.startTest(state.selectedDuration);
-      }
+    if (!state.isTestStarted) {
+      set({
+        isTestStarted: true,
+        startTime: Date.now(),
+      });
+      state.startTest(state.selectedDuration);
+    }
 
-      let newCursorPosition = state.cursorPosition;
-      let newInputText = state.inputText;
+    let newCursorPosition = state.cursorPosition;
+    let newInputText = state.inputText;
 
-      if (key === "ArrowLeft") {
+    switch (key) {
+      case "ArrowLeft":
         newCursorPosition = Math.max(0, state.cursorPosition - 1);
-      } else if (key === "ArrowRight") {
+        break;
+      case "ArrowRight":
         newCursorPosition = Math.min(
           state.inputText.length,
           state.cursorPosition + 1,
         );
-      } else if (key === "Backspace") {
+        break;
+      case "Backspace":
         if (state.cursorPosition > 0) {
           newInputText =
             state.inputText.slice(0, state.cursorPosition - 1) +
             state.inputText.slice(state.cursorPosition);
-          newCursorPosition = state.cursorPosition - 1;
+          newCursorPosition -= 1;
         }
-      } else if (key.length === 1) {
-        newInputText =
-          state.inputText.slice(0, state.cursorPosition) +
-          key +
-          state.inputText.slice(state.cursorPosition);
-        newCursorPosition = state.cursorPosition + 1;
-      }
+        break;
+      default:
+        if (key.length === 1) {
+          newInputText =
+            state.inputText.slice(0, state.cursorPosition) +
+            key +
+            state.inputText.slice(state.cursorPosition);
+          newCursorPosition += 1;
+        }
+        break;
+    }
 
-      if (newCursorPosition !== state.cursorPosition) {
-        return {
-          ...state,
-          inputText: newInputText,
-          cursorPosition: newCursorPosition,
-        };
-      }
-
-      return {
-        ...state,
-        inputText: newInputText,
-      };
-    }),
-
-  startTest: (duration: number = DEFAULT_DURATION) => {
-    set((state) => {
-      if (state.intervalID) clearInterval(state.intervalID);
-
-      const id = setInterval(() => {
-        if (!state.intervalID) set({ intervalID: id });
-
-        set((prev) => {
-          if (prev.timer <= 0) {
-            state.endTest();
-            return { timer: 0 };
-          }
-          return { timer: prev.timer - 1 };
-        });
-      }, TIMER_SPEED);
-
-      return {
-        selectedDuration: duration,
-        startTime: Date.now(),
-        endTime: null,
-        timer: duration,
-        isTestStarted: true,
-        isInputDisabled: false,
-        incorrectChars: 0,
-      };
+    set({
+      inputText: newInputText,
+      cursorPosition: newCursorPosition,
     });
   },
 
-  endTest: () =>
-    set((state) => {
-      if (state.intervalID) clearInterval(state.intervalID);
+  startTest: (duration: number = DEFAULT_DURATION) => {
+    const state = get();
+    if (state.intervalID) clearInterval(state.intervalID);
 
-      state.calculateWPM();
+    const id = setInterval(() => {
+      if (!state.intervalID) set({ intervalID: id });
 
-      return {
-        endTime: Date.now(),
-        cursorPosition: 0,
-        timer: state.selectedDuration,
-        isTestStarted: false,
-        isInputDisabled: true,
-        intervalID: null,
-      };
-    }),
+      set((prev) => {
+        if (prev.timer <= 0) {
+          state.endTest();
+          return { timer: 0 };
+        }
+        return { timer: prev.timer - 1 };
+      });
+    }, TIMER_SPEED);
+
+    set({
+      selectedDuration: duration,
+      startTime: Date.now(),
+      endTime: null,
+      timer: duration,
+      isTestStarted: true,
+      isInputDisabled: false,
+      incorrectChars: 0,
+    });
+  },
+
+  endTest: () => {
+    const state = get();
+    if (state.intervalID) clearInterval(state.intervalID);
+
+    state.calculateWPM();
+
+    set({
+      endTime: Date.now(),
+      cursorPosition: 0,
+      timer: state.selectedDuration,
+      isTestStarted: false,
+      isInputDisabled: true,
+      intervalID: null,
+    });
+  },
 
   setTimer: (time) => set({ timer: time }),
 
@@ -190,27 +179,22 @@ const useStore = create<StoreState>((set) => ({
   setSelectedDuration: (time) => set({ selectedDuration: time }),
 
   generateWords: (count: number) => {
-    set(() => {
-      const randomWords = generateWords(count);
-      return { displayText: randomWords };
-    });
+    set({ displayText: generateWords(count) });
   },
 
-  setIsTestStarted: (started: boolean) => set({ isTestStarted: started }),
-
   calculateWPM: () => {
-    set((state) => {
-      if (state.startTime) {
-        const timeElapsed = (Date.now() - state.startTime) / 60000;
-        const wordsTyped = state.inputText
-          .trim()
-          .split(" ")
-          .filter(Boolean).length;
-        const wpm = Math.round(wordsTyped / timeElapsed);
-        return { wpm };
-      }
-      return { wpm: 0 };
-    });
+    const state = get();
+    if (state.startTime) {
+      const timeElapsed = (Date.now() - state.startTime) / 60000;
+      const wordsTyped = state.inputText
+        .trim()
+        .split(" ")
+        .filter(Boolean).length;
+      const wpm = Math.round(wordsTyped / timeElapsed);
+      set({ wpm });
+    } else {
+      set({ wpm: 0 });
+    }
   },
 
   showResults: () => set({ isResultsVisible: true }),
@@ -227,23 +211,23 @@ const useStore = create<StoreState>((set) => ({
       isInputDisabled: false,
     })),
 
-  resetTest: () =>
-    set((state) => {
-      if (state.intervalID) clearInterval(state.intervalID);
+  resetTest: () => {
+    const state = get();
+    if (state.intervalID) clearInterval(state.intervalID);
 
-      return {
-        inputText: "",
-        cursorPosition: 0,
-        startTime: null,
-        endTime: null,
-        timer: state.selectedDuration,
-        isTestStarted: false,
-        wpm: null,
-        isInputDisabled: false,
-        incorrectChars: 0,
-        intervalID: null,
-      };
-    }),
+    set({
+      inputText: "",
+      cursorPosition: 0,
+      startTime: null,
+      endTime: null,
+      timer: state.selectedDuration,
+      isTestStarted: false,
+      wpm: null,
+      isInputDisabled: false,
+      incorrectChars: 0,
+      intervalID: null,
+    });
+  },
 }));
 
 export { useStore };
